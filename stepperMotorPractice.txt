@@ -1,0 +1,165 @@
+/********************************************************
+* For orientlal motor the range of wait is from 
+* {100 - 1000} with a wait at x1
+********************************************************/
+
+  
+
+#include "sam.h"
+#include <stdbool.h>
+
+// #define  A				PORT_PD08
+// #define  B				PORT_PD09
+// #define  BRAKE		    PORT_PD10
+// #define  EN				PORT_PD11
+
+#define  D		    PORT_PB08
+#define  P			PORT_PB09
+
+void clockSetup(void);
+void portSetup(void);
+void wait(volatile int d);
+
+
+int main(void){
+
+	SystemInit();
+	clockSetup();
+	portSetup();
+	
+	
+	Port *por = PORT;
+	PortGroup *porB = &(por->Group[1]);
+	//PortGroup *porD = &(por->Group[3]);
+	volatile int i = 200;
+	volatile int count = 0;
+	//porD->OUTSET.reg = EN;
+	
+	
+	porB->OUTSET.reg = D; //CW
+	//porB->OUTCLR.reg = D; //CCW
+	
+	while(1){
+		
+		/* accel */
+		if(i > 20){i--;}	
+		porB->OUTCLR.reg = P;
+		wait(i);
+		count++;
+		if(i > 20){i--;}
+		porB->OUTSET.reg = P;
+		wait(i);
+		count++;
+		
+		if(i < 21){
+			while(1){
+				
+				/* decel */
+				if(i < 200){i++;}	
+				porB->OUTCLR.reg = P;
+ 				wait(i);
+				count++;
+				if(i < 200){i++;}
+				porB->OUTSET.reg = P;
+				wait(i);
+				count++;
+			}
+		}
+		
+	}
+	
+}
+
+void wait(volatile int d){
+	int count = 0;
+	while (count < d*5){
+		count++;
+	}
+}
+
+void clockSetup(void){
+	//12MHz crystal on board selected mapped to PB22/PB23
+	OSCCTRL->XOSCCTRL[1].bit.ENALC = 1;	//enables auto loop ctrl to control amp of osc
+	OSCCTRL->XOSCCTRL[1].bit.IMULT = 4;
+	OSCCTRL->XOSCCTRL[1].bit.IPTAT = 3;
+	OSCCTRL->XOSCCTRL[1].bit.ONDEMAND = 1;
+	OSCCTRL->XOSCCTRL[1].bit.RUNSTDBY = 1;
+	OSCCTRL->XOSCCTRL[1].bit.XTALEN = 1;	//select ext crystal osc mode
+	OSCCTRL->XOSCCTRL[1].bit.ENABLE = 1;
+	
+	GCLK->GENCTRL[0].reg = GCLK_GENCTRL_SRC_XOSC1 | GCLK_GENCTRL_RUNSTDBY | !(GCLK_GENCTRL_DIVSEL) | GCLK_GENCTRL_OE | GCLK_GENCTRL_GENEN | 12<<16;	//divide by 12 1MHz
+	while(GCLK->SYNCBUSY.bit.GENCTRL0){}	//wait for sync
+	
+}
+
+void portSetup(void){
+	Port *por = PORT;
+	//PortGroup *porA = &(por->Group[0]);
+	PortGroup *porB = &(por->Group[1]);
+	//PortGroup *porC = &(por->Group[2]);
+	//PortGroup *porD = &(por->Group[3]);
+	
+	/* Motor Micromo*/
+// 	porD->DIRSET.reg = A | B | EN | BRAKE;
+// 	porD->OUTCLR.reg = A | B | BRAKE | EN;
+
+
+	/* Motor */	
+	porB->DIRSET.reg = P | D;
+	porB->OUTSET.reg = P | D;
+}
+
+
+
+/*
+		/ * CW * /		
+// 		porD->OUTSET.reg = A;
+// 		porD->OUTCLR.reg = B;
+// 		wait(i);
+// 		porD->OUTCLR.reg = A;
+// 		wait(i);
+// 		porD->OUTSET.reg = B;
+// 		wait(i);
+// 		porD->OUTSET.reg = A;
+// 		wait(i);
+
+		/ * accel CW * /
+		static int j = 200; 
+		if(j > 20){j--;}
+			porD->OUTSET.reg = A;
+			porD->OUTCLR.reg = B;
+			wait(j);
+			porD->OUTCLR.reg = A;
+			wait(j);
+			porD->OUTSET.reg = B;
+			wait(j);
+			porD->OUTSET.reg = A;
+			wait(j);
+			
+			
+		/ * CCW * /
+		/ *porB->OUTSET.reg = A;
+		porB->OUTSET.reg = B;
+		wait(i);
+		porB->OUTCLR.reg = A;
+		wait(i);
+		porB->OUTCLR.reg = B;
+		wait(i);
+		porB->OUTSET.reg = A;
+		wait(i);
+		count ++;* /	
+		
+			
+		/ * decel CW * /
+		/ *static int j = 10; 
+		if(j <= 100){j++;}
+			porB->OUTSET.reg = A;
+			porB->OUTCLR.reg = B;
+			wait(j);
+			porB->OUTCLR.reg = A;
+			wait(j);
+			porB->OUTSET.reg = B;
+			wait(j);
+			porB->OUTSET.reg = A;
+			wait(j);* /	
+	}*/
